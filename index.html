@@ -15,9 +15,38 @@ src="https://unpkg.com/leaflet/dist/leaflet.js">
 <style>
 
 body{
+
 font-family:Arial;
 background:#f5f5f5;
 text-align:center;
+
+}
+
+#menu{
+
+margin-top:80px;
+
+}
+
+button{
+
+margin:10px;
+padding:14px;
+
+width:240px;
+
+font-size:16px;
+
+cursor:pointer;
+
+border-radius:8px;
+
+border:none;
+
+background:#222;
+
+color:white;
+
 }
 
 #map{
@@ -31,45 +60,17 @@ background:white;
 
 border-radius:15px;
 
-box-shadow:
-0px 10px 30px rgba(0,0,0,0.2);
+box-shadow:0px 10px 30px rgba(0,0,0,0.2);
+
+display:none;
 
 }
 
-button{
+#hud{
 
-display:block;
+font-size:20px;
 
-margin:10px auto;
-
-padding:12px;
-
-width:240px;
-
-cursor:pointer;
-
-font-size:16px;
-
-border-radius:8px;
-
-border:none;
-
-background:#222;
-
-color:white;
-
-}
-
-button:hover{
-
-background:#444;
-
-}
-
-#resultado{
-
-font-size:22px;
-margin:15px;
+display:none;
 
 }
 
@@ -79,7 +80,31 @@ margin:15px;
 
 <body>
 
-<h1>Gabi's Guess the Country</h1>
+<h1>Quiz de Países 🌎</h1>
+
+<div id="menu">
+
+<h2>Escolha a dificuldade</h2>
+
+<button onclick="iniciar('facil')">🟢 Fácil</button>
+
+<button onclick="iniciar('medio')">🟡 Médio</button>
+
+<button onclick="iniciar('dificil')">🔴 Difícil</button>
+
+<button onclick="iniciar('todos')">🌎 Todos</button>
+
+</div>
+
+<div id="hud">
+
+⏱️ Tempo:
+<span id="tempo">10</span>
+
+⭐ Pontos:
+<span id="pontos">0</span>
+
+</div>
 
 <div id="map"></div>
 
@@ -87,26 +112,18 @@ margin:15px;
 
 <p id="resultado"></p>
 
-<button onclick="novaPergunta()">
-Próximo País
-</button>
-
 <script>
 
-// MAPA LIMPO
+// ===== MAPA =====
 
 const map=L.map('map',{
 
 zoomControl:false,
 dragging:false,
 scrollWheelZoom:false,
-doubleClickZoom:false,
-keyboard:false
+doubleClickZoom:false
 
 }).setView([0,0],2);
-
-
-// fundo invisível
 
 L.tileLayer(
 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
@@ -115,29 +132,87 @@ L.tileLayer(
 
 
 
+let paises=[];
+let paisesAtivos=[];
 let camadaPais;
 
-let paises=[];
+let pontos=0;
+let tempo=10;
+let intervalo;
 
 
 
-// função segura para pegar nome
+// ===== LISTAS =====
 
-function nomePais(feature){
+// FÁCIL
 
-return (
+const facil=[
 
-feature.properties.ADMIN ||
+"Brazil","United States of America","Canada","Mexico","Argentina",
 
-feature.properties.name ||
+"France","Germany","Italy","Spain","Portugal","United Kingdom",
 
-feature.properties.NAME ||
+"Russia","China","India","Japan","South Korea",
 
-feature.properties.NAME_EN ||
+"Australia","New Zealand",
 
-feature.properties.SOVEREIGNT ||
+"Egypt","South Africa","Saudi Arabia",
 
-"País"
+"Turkey","Iran","Israel",
+
+"Indonesia","Thailand","Philippines"
+
+];
+
+
+// MÉDIO
+
+const medio=[
+
+"Poland","Romania","Hungary","Greece","Ukraine","Sweden",
+
+"Norway","Finland","Morocco","Algeria","Nigeria","Kenya",
+
+"Ghana","Peru","Chile","Colombia","Bolivia","Paraguay",
+
+"Vietnam","Malaysia","Pakistan","Kazakhstan",
+
+"United Arab Emirates","Qatar","Oman"
+
+];
+
+
+// DIFÍCIL
+
+const dificil=[
+
+"Lesotho","Eswatini","Liechtenstein","San Marino","Monaco",
+
+"Nauru","Tuvalu","Kiribati","Palau","Marshall Islands",
+
+"Seychelles","Comoros","Djibouti","Benin","Togo",
+
+"Brunei","Bhutan","Laos","Timor-Leste",
+
+"Slovenia","Luxembourg","Moldova"
+
+];
+
+
+
+function nomePais(f){
+
+return(
+
+f.properties.ADMIN ||
+
+f.properties.name ||
+
+f.properties.NAME ||
+
+f.properties.NAME_EN ||
+
+""
 
 );
 
@@ -145,53 +220,122 @@ feature.properties.SOVEREIGNT ||
 
 
 
-// carregar mundo inteiro
+// ===== CARREGA MUNDO =====
 
 fetch(
 "https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson"
 )
 
-.then(res=>res.json())
+.then(r=>r.json())
 
 .then(data=>{
 
-// filtra só países válidos
-
-paises=data.features.filter(f=>nomePais(f)!=="País");
-
-novaPergunta();
+paises=data.features;
 
 });
 
 
 
-function shuffle(array){
+function iniciar(nivel){
 
-return [...array].sort(()=>Math.random()-0.5);
+document.getElementById("menu").style.display="none";
+
+document.getElementById("map").style.display="block";
+
+document.getElementById("hud").style.display="block";
+
+
+if(nivel==="todos"){
+
+paisesAtivos=paises;
+
+}else{
+
+const lista=
+
+nivel==="facil" ? facil :
+
+nivel==="medio" ? medio :
+
+dificil;
+
+
+paisesAtivos=
+
+paises.filter(p=>
+
+lista.includes(nomePais(p))
+
+);
+
+}
+
+novaPergunta();
 
 }
 
 
 
+function shuffle(a){
+
+return[...a].sort(()=>Math.random()-0.5);
+
+}
+
+
+
+function iniciarTimer(correto){
+
+clearInterval(intervalo);
+
+tempo=10;
+
+tempoSpan.innerText=tempo;
+
+
+intervalo=setInterval(()=>{
+
+tempo--;
+
+tempoSpan.innerText=tempo;
+
+if(tempo<=0){
+
+clearInterval(intervalo);
+
+resultado.innerText=
+
+"⏰ Era "+nomePais(correto);
+
+setTimeout(novaPergunta,2000);
+
+}
+
+},1000);
+
+}
+
+
+
+const tempoSpan=document.getElementById("tempo");
+
+const resultado=document.getElementById("resultado");
+
+
+
 function novaPergunta(){
 
-if(!paises.length)return;
+resultado.innerText="";
 
-
-document.getElementById("resultado")
-.innerText="";
-
-
-// escolhe correto
 
 const correto=
 
-paises[
-Math.floor(Math.random()*paises.length)
+paisesAtivos[
+
+Math.floor(Math.random()*paisesAtivos.length)
+
 ];
 
-
-// remove anterior
 
 if(camadaPais){
 
@@ -200,23 +344,18 @@ map.removeLayer(camadaPais);
 }
 
 
-// desenha silhueta
-
 camadaPais=L.geoJSON(correto,{
 
 style:{
 
 color:"#000",
 fillColor:"#000",
-fillOpacity:1,
-weight:1
+fillOpacity:1
 
 }
 
 }).addTo(map);
 
-
-// centraliza
 
 map.fitBounds(
 
@@ -227,12 +366,11 @@ camadaPais.getBounds(),
 );
 
 
+const errados=
 
-// montar opções
+shuffle(
 
-const errados=shuffle(
-
-paises.filter(
+paisesAtivos.filter(
 
 p=>nomePais(p)!==nomePais(correto)
 
@@ -252,40 +390,50 @@ correto,
 ]);
 
 
-
 const div=document.getElementById("opcoes");
 
 div.innerHTML="";
 
 
-
 respostas.forEach(opcao=>{
 
-const botao=document.createElement("button");
+const b=document.createElement("button");
 
-botao.innerText=nomePais(opcao);
+b.innerText=nomePais(opcao);
 
 
-botao.onclick=()=>{
+b.onclick=()=>{
 
-document.getElementById("resultado")
-.innerText=
+clearInterval(intervalo);
 
-nomePais(opcao)===nomePais(correto)
+if(nomePais(opcao)===nomePais(correto)){
 
-?
+pontos++;
 
-"✅ Acertou!"
+resultado.innerText="✅ Acertou!";
 
-:
+}else{
 
-"❌ Errou!";
+resultado.innerText=
+
+"❌ Era "+nomePais(correto);
+
+}
+
+
+document.getElementById("pontos")
+.innerText=pontos;
+
+setTimeout(novaPergunta,1500);
 
 };
 
-div.appendChild(botao);
+div.appendChild(b);
 
 });
+
+
+iniciarTimer(correto);
 
 }
 
