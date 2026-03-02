@@ -27,11 +27,13 @@ margin:auto;
 }
 
 button{
+
 display:block;
 margin:10px auto;
 padding:10px;
-width:200px;
+width:220px;
 cursor:pointer;
+
 }
 
 </style>
@@ -48,79 +50,158 @@ cursor:pointer;
 
 <p id="resultado"></p>
 
+<button onclick="novaPergunta()">
+Próximo País
+</button>
+
 <script>
 
-// cria mapa vazio
+// MAPA
+
 const map = L.map('map',{
+
 zoomControl:false,
 dragging:false,
 scrollWheelZoom:false,
 doubleClickZoom:false
+
 }).setView([0,0],2);
 
-// fundo branco
 L.tileLayer(
+
 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-{
-opacity:0
-}
+
+{opacity:0}
+
 ).addTo(map);
 
 
-// Brasil GeoJSON (exemplo)
-fetch("https://raw.githubusercontent.com/johan/world.geo.json/master/countries/BRA.geo.json")
+let camadaPais;
 
-.then(res => res.json())
 
-.then(data => {
+// LISTA DE PAÍSES
 
-const pais = L.geoJSON(data,{
+const paises=[
+
+{name:"Brasil",code:"BRA"},
+
+{name:"Argentina",code:"ARG"},
+
+{name:"Chile",code:"CHL"},
+
+{name:"Peru",code:"PER"},
+
+{name:"Colômbia",code:"COL"},
+
+{name:"México",code:"MEX"},
+
+{name:"França",code:"FRA"},
+
+{name:"Japão",code:"JPN"}
+
+];
+
+
+// embaralhar
+
+function shuffle(array){
+
+return array.sort(()=>Math.random()-0.5);
+
+}
+
+
+// NOVA PERGUNTA
+
+function novaPergunta(){
+
+document.getElementById("resultado")
+.innerText="";
+
+const correto=
+
+paises[
+Math.floor(
+Math.random()*paises.length
+)
+
+];
+
+
+// carregar GeoJSON
+
+fetch(
+
+`https://raw.githubusercontent.com/johan/world.geo.json/master/countries/${correto.code}.geo.json`
+
+)
+
+.then(res=>res.json())
+
+.then(data=>{
+
+if(camadaPais){
+
+map.removeLayer(camadaPais);
+
+}
+
+camadaPais=L.geoJSON(data,{
 
 style:{
+
 color:"black",
+
 fillColor:"black",
+
 fillOpacity:1
+
 }
 
 }).addTo(map);
 
-map.fitBounds(pais.getBounds());
+map.fitBounds(camadaPais.getBounds());
 
 });
 
 
-// QUIZ
+// montar opções
 
-const pergunta = {
+const opcoes=shuffle(
 
-resposta:"Brasil",
+[
 
-opcoes:[
-"Argentina",
-"Chile",
-"Brasil",
-"Peru",
-"Colômbia"
+correto,
+
+...shuffle(paises)
+.filter(p=>p.code!==correto.code)
+.slice(0,4)
+
 ]
 
-};
+);
 
-const div = document.getElementById("opcoes");
+const div=document.getElementById("opcoes");
 
-pergunta.opcoes.forEach(opcao=>{
+div.innerHTML="";
+
+
+opcoes.forEach(opcao=>{
 
 const botao=document.createElement("button");
 
-botao.innerText=opcao;
+botao.innerText=opcao.name;
 
 botao.onclick=()=>{
 
 document.getElementById("resultado")
 .innerText=
 
-opcao===pergunta.resposta ?
+opcao.code===correto.code ?
 
-"✅ Acertou!" :
+"✅ Acertou!"
+
+:
 
 "❌ Errou!";
 
@@ -129,6 +210,13 @@ opcao===pergunta.resposta ?
 div.appendChild(botao);
 
 });
+
+}
+
+
+// começa jogo
+
+novaPergunta();
 
 </script>
 
