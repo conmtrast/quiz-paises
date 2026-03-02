@@ -34,6 +34,14 @@ color:white;
 
 cursor:pointer;
 
+transition:0.2s;
+
+}
+
+button:hover{
+
+transform:scale(1.05);
+
 }
 
 #map svg{
@@ -51,6 +59,18 @@ fill:black;
 stroke:white;
 
 stroke-width:0.5;
+
+}
+
+.correct{
+
+background:#16a34a !important;
+
+}
+
+.wrong{
+
+background:#dc2626 !important;
 
 }
 
@@ -76,6 +96,12 @@ stroke-width:0.5;
 
 <div id="game" style="display:none">
 
+<h3 id="score">
+
+Pontuação: 0 | Pergunta 0
+
+</h3>
+
 <div id="map"></div>
 
 <div id="options"></div>
@@ -94,8 +120,6 @@ Próximo País
 <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
 
 <script>
-
-// ------------ dificuldade ------------
 
 const facil=[
 
@@ -139,21 +163,34 @@ let difficultyCountries
 let currentCountry
 
 
+let score=0
+
+let pergunta=0
+
+let usados=[]
+
+
 
 function shuffle(a){
 
-return a.sort(()=>0.5-Math.random())
+return [...a].sort(()=>0.5-Math.random())
 
 }
 
 
-// ------------ iniciar ------------
+// iniciar
 
 async function startGame(level){
 
 document.getElementById("menu").style.display="none"
 
 document.getElementById("game").style.display="block"
+
+score=0
+
+pergunta=0
+
+usados=[]
 
 
 await loadCountries()
@@ -200,8 +237,6 @@ nextCountry()
 }
 
 
-// ------------ API países ------------
-
 async function loadCountries(){
 
 const res=
@@ -214,8 +249,6 @@ countries=await res.json()
 
 }
 
-
-// ------------ MAPA ------------
 
 async function loadGeo(){
 
@@ -232,22 +265,17 @@ geoData=await res.json()
 }
 
 
-// ------------ desenhar ------------
-
 function drawCountry(iso){
 
 const map=document.getElementById("map")
 
 map.innerHTML=""
 
-
-
 let feature=geoData.features.find(f=>
 
 f.id===iso
 
 )
-
 
 if(!feature){
 
@@ -257,11 +285,9 @@ return
 
 }
 
-
 const width=400
 
 const height=300
-
 
 const svg=d3.select("#map")
 
@@ -272,18 +298,11 @@ const svg=d3.select("#map")
 .attr("height",height)
 
 
-
 const projection=
 
 d3.geoMercator()
 
-.fitSize(
-
-[width,height],
-
-feature
-
-)
+.fitSize([width,height],feature)
 
 
 const path=
@@ -291,7 +310,6 @@ const path=
 d3.geoPath()
 
 .projection(projection)
-
 
 
 svg.append("path")
@@ -305,17 +323,23 @@ svg.append("path")
 }
 
 
+// evita repetir país
 
-// ------------ próximo ------------
+function escolherPais(){
 
-function nextCountry(){
+if(usados.length>=difficultyCountries.length){
 
-document.getElementById("result").innerText=""
+usados=[]
 
-document.getElementById("options").innerHTML=""
+}
 
 
-currentCountry=
+let candidato
+
+
+do{
+
+candidato=
 
 difficultyCountries[
 
@@ -331,6 +355,48 @@ difficultyCountries.length
 
 ]
 
+}
+
+while(usados.includes(candidato.cca3))
+
+
+usados.push(candidato.cca3)
+
+return candidato
+
+}
+
+
+// próxima pergunta
+
+function nextCountry(){
+
+document.getElementById("result").innerText=""
+
+document.getElementById("options").innerHTML=""
+
+pergunta++
+
+
+document.getElementById("score")
+
+.innerText=
+
+"Pontuação: "
+
++
+
+score+
+
+" | Pergunta "+
+
+pergunta
+
+
+currentCountry=
+
+escolherPais()
+
 
 drawCountry(
 
@@ -341,15 +407,26 @@ currentCountry.cca3
 
 // alternativas
 
-let options=[
+let wrong=
+
+shuffle(
+
+countries.filter(c=>
+
+c.cca3!=currentCountry.cca3)
+
+).slice(0,4)
+
+
+let options=
+
+shuffle([
 
 currentCountry,
 
-...shuffle(countries).slice(0,4)
+...wrong
 
-]
-
-options=shuffle(options)
+])
 
 
 options.forEach(opt=>{
@@ -363,9 +440,20 @@ opt.name.common
 
 btn.onclick=()=>{
 
-if(opt.name.common===
+document
 
-currentCountry.name.common){
+.querySelectorAll("#options button")
+
+.forEach(b=>b.disabled=true)
+
+
+if(opt.cca3===
+
+currentCountry.cca3){
+
+btn.classList.add("correct")
+
+score++
 
 document.getElementById("result")
 
@@ -374,6 +462,8 @@ document.getElementById("result")
 }
 
 else{
+
+btn.classList.add("wrong")
 
 document.getElementById("result")
 
@@ -389,7 +479,10 @@ currentCountry.name.common
 
 }
 
-document.getElementById("options")
+
+document
+
+.getElementById("options")
 
 .appendChild(btn)
 
