@@ -23,12 +23,6 @@ text-align:center;
 
 }
 
-h1{
-
-margin-top:20px;
-
-}
-
 #map{
 
 height:450px;
@@ -45,7 +39,6 @@ box-shadow:
 0px 10px 30px rgba(0,0,0,0.2);
 
 }
-
 
 button{
 
@@ -105,28 +98,18 @@ Próximo País
 <script>
 
 
-// MAPA LIMPO
-
-const map = L.map('map',{
+const map=L.map('map',{
 
 zoomControl:false,
-
 dragging:false,
-
 scrollWheelZoom:false,
-
 doubleClickZoom:false,
-
-boxZoom:false,
-
-keyboard:false,
-
-tap:false
+keyboard:false
 
 }).setView([0,0],2);
 
 
-// fundo invisível (sem mapa)
+// fundo invisível
 
 L.tileLayer(
 
@@ -140,29 +123,27 @@ L.tileLayer(
 
 let camadaPais;
 
+let paises=[];
 
 
-// LISTA
 
-const paises=[
+// carregar mundo inteiro
 
-{name:"Brasil",code:"BRA"},
+fetch(
 
-{name:"Argentina",code:"ARG"},
+"https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson"
 
-{name:"Chile",code:"CHL"},
+)
 
-{name:"Peru",code:"PER"},
+.then(res=>res.json())
 
-{name:"Colômbia",code:"COL"},
+.then(data=>{
 
-{name:"México",code:"MEX"},
+paises=data.features;
 
-{name:"França",code:"FRA"},
+novaPergunta();
 
-{name:"Japão",code:"JPN"}
-
-];
+});
 
 
 
@@ -176,8 +157,14 @@ return array.sort(()=>Math.random()-0.5);
 
 function novaPergunta(){
 
+if(!paises.length)return;
+
+
 document.getElementById("resultado")
 .innerText="";
+
+
+// escolher aleatório
 
 const correto=
 
@@ -192,16 +179,7 @@ Math.random()*paises.length
 ];
 
 
-
-fetch(
-
-`https://raw.githubusercontent.com/johan/world.geo.json/master/countries/${correto.code}.geo.json`
-
-)
-
-.then(res=>res.json())
-
-.then(data=>{
+// remover anterior
 
 if(camadaPais){
 
@@ -210,9 +188,9 @@ map.removeLayer(camadaPais);
 }
 
 
-// silhueta estilizada
+// desenhar país
 
-camadaPais=L.geoJSON(data,{
+camadaPais=L.geoJSON(correto,{
 
 style:{
 
@@ -220,42 +198,37 @@ color:"#000",
 
 fillColor:"#000",
 
-fillOpacity:1,
-
-weight:1
+fillOpacity:1
 
 }
 
 }).addTo(map);
 
 
-// centraliza perfeito
-
 map.fitBounds(
 
 camadaPais.getBounds(),
 
-{
-
-padding:[40,40]
-
-}
+{padding:[40,40]}
 
 );
 
-});
 
+// respostas
 
-
-// opções
-
-const opcoes=shuffle([
+const respostas=shuffle([
 
 correto,
 
 ...shuffle(paises)
 
-.filter(p=>p.code!==correto.code)
+.filter(p=>
+
+p.properties.ADMIN !==
+
+correto.properties.ADMIN
+
+)
 
 .slice(0,4)
 
@@ -268,18 +241,23 @@ div.innerHTML="";
 
 
 
-opcoes.forEach(opcao=>{
+respostas.forEach(opcao=>{
 
 const botao=document.createElement("button");
 
-botao.innerText=opcao.name;
+botao.innerText=
+
+opcao.properties.ADMIN;
+
 
 botao.onclick=()=>{
 
 document.getElementById("resultado")
 .innerText=
 
-opcao.code===correto.code
+opcao.properties.ADMIN===
+
+correto.properties.ADMIN
 
 ?
 
@@ -296,10 +274,6 @@ div.appendChild(botao);
 });
 
 }
-
-
-
-novaPergunta();
 
 </script>
 
