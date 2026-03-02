@@ -1,35 +1,56 @@
 <!DOCTYPE html>
 <html>
 <head>
+
 <meta charset="UTF-8">
+
 <title>Quiz Países 🌎</title>
 
 <style>
 
 body{
+
 font-family:Arial;
+
 text-align:center;
+
 background:#f3f6fa;
+
 }
 
 button{
+
 margin:5px;
+
 padding:10px 15px;
-cursor:pointer;
+
 border-radius:8px;
+
 border:none;
+
 background:#3b82f6;
+
 color:white;
+
+cursor:pointer;
+
 }
 
 #map svg{
 
 width:400px;
+
 height:300px;
+
+}
+
+.country{
 
 fill:black;
 
-margin-top:20px;
+stroke:white;
+
+stroke-width:0.5;
 
 }
 
@@ -39,23 +60,17 @@ margin-top:20px;
 
 <body>
 
-<h1>🌎 Quiz de Países</h1>
+<h1>🌎 Quiz Países</h1>
 
 <div id="menu">
 
-<h2>Escolha dificuldade</h2>
+<h2>Dificuldade</h2>
 
-<button onclick="startGame('facil')">
-Fácil
-</button>
+<button onclick="startGame('facil')">Fácil</button>
 
-<button onclick="startGame('medio')">
-Médio
-</button>
+<button onclick="startGame('medio')">Médio</button>
 
-<button onclick="startGame('dificil')">
-Difícil
-</button>
+<button onclick="startGame('dificil')">Difícil</button>
 
 </div>
 
@@ -75,90 +90,75 @@ Próximo País
 
 </div>
 
+
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+
 <script>
 
-let countries = []
+// ------------ dificuldade ------------
 
-let currentCountry
+const facil=[
+
+"Brazil","United States","Argentina","France",
+
+"Germany","Spain","Italy","Portugal",
+
+"Japan","China","India","Australia",
+
+"Mexico","Chile","Egypt"
+
+]
+
+const medio=[
+
+"Poland","Turkey","Ukraine",
+
+"Thailand","Vietnam",
+
+"Morocco","Greece",
+
+"Norway","Sweden",
+
+"Finland",
+
+"New Zealand",
+
+"Colombia",
+
+"Romania"
+
+]
+
+
+let countries
+
+let geoData
 
 let difficultyCountries
 
-
-// ------------------------------
-// níveis sugeridos
-// ------------------------------
-
-const facil = [
-
-"Brazil",
-"United States",
-"Canada",
-"Argentina",
-"France",
-"Germany",
-"Spain",
-"Italy",
-"Portugal",
-"United Kingdom",
-"Japan",
-"China",
-"India",
-"Australia",
-"Mexico",
-"Chile",
-"Peru",
-"South Africa",
-"Egypt"
-
-]
+let currentCountry
 
 
-const medio = [
 
-"Poland",
-"Turkey",
-"Ukraine",
-"Thailand",
-"Vietnam",
-"Morocco",
-"Greece",
-"Norway",
-"Sweden",
-"Finland",
-"New Zealand",
-"Colombia",
-"Venezuela",
-"Bolivia",
-"Romania",
-"Hungary",
-"Iran",
-"Iraq"
+function shuffle(a){
 
-]
+return a.sort(()=>0.5-Math.random())
+
+}
 
 
-// difícil = resto automaticamente
+// ------------ iniciar ------------
 
-function startGame(level){
+async function startGame(level){
 
 document.getElementById("menu").style.display="none"
 
 document.getElementById("game").style.display="block"
 
-fetchCountries(level)
 
-}
+await loadCountries()
 
-
-async function fetchCountries(level){
-
-const res = await fetch(
-
-"https://restcountries.com/v3.1/all?fields=name,cca3"
-
-)
-
-countries = await res.json()
+await loadGeo()
 
 
 if(level=="facil"){
@@ -167,9 +167,7 @@ difficultyCountries=
 
 countries.filter(c=>
 
-facil.includes(c.name.common)
-
-)
+facil.includes(c.name.common))
 
 }
 
@@ -179,9 +177,7 @@ difficultyCountries=
 
 countries.filter(c=>
 
-medio.includes(c.name.common)
-
-)
+medio.includes(c.name.common))
 
 }
 
@@ -195,73 +191,128 @@ countries.filter(c=>
 
 &&
 
-!medio.includes(c.name.common)
-
-)
+!medio.includes(c.name.common))
 
 }
-
 
 nextCountry()
 
 }
 
 
+// ------------ API países ------------
 
-async function loadMap(cca3){
+async function loadCountries(){
 
-try{
+const res=
 
-// base open source MUITO confiável
+await fetch(
 
-let url=
+"https://restcountries.com/v3.1/all?fields=name,cca3")
 
-`https://cdn.jsdelivr.net/npm/svg-world-map@1/world/${cca3.toLowerCase()}.svg`
-
-let res = await fetch(url)
-
-
-if(!res.ok){
-
-throw "erro"
+countries=await res.json()
 
 }
 
 
-let svg = await res.text()
+// ------------ MAPA ------------
 
-document.getElementById("map").innerHTML=svg
+async function loadGeo(){
 
-}
+const res=
 
-catch(e){
+await fetch(
 
-document.getElementById("map").innerHTML=
+"https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json"
 
-"<p>Silhueta não encontrada 😢</p>"
+)
 
-}
-
-}
-
-
-
-function shuffle(arr){
-
-return arr.sort(()=>0.5-Math.random())
+geoData=await res.json()
 
 }
 
 
+// ------------ desenhar ------------
 
-async function nextCountry(){
+function drawCountry(iso){
+
+const map=document.getElementById("map")
+
+map.innerHTML=""
+
+
+
+let feature=geoData.features.find(f=>
+
+f.id===iso
+
+)
+
+
+if(!feature){
+
+map.innerHTML="Silhueta não encontrada 😢"
+
+return
+
+}
+
+
+const width=400
+
+const height=300
+
+
+const svg=d3.select("#map")
+
+.append("svg")
+
+.attr("width",width)
+
+.attr("height",height)
+
+
+
+const projection=
+
+d3.geoMercator()
+
+.fitSize(
+
+[width,height],
+
+feature
+
+)
+
+
+const path=
+
+d3.geoPath()
+
+.projection(projection)
+
+
+
+svg.append("path")
+
+.datum(feature)
+
+.attr("class","country")
+
+.attr("d",path)
+
+}
+
+
+
+// ------------ próximo ------------
+
+function nextCountry(){
 
 document.getElementById("result").innerText=""
 
 document.getElementById("options").innerHTML=""
-
-document.getElementById("map").innerHTML="Carregando..."
-
 
 
 currentCountry=
@@ -270,42 +321,44 @@ difficultyCountries[
 
 Math.floor(
 
-Math.random()*difficultyCountries.length
+Math.random()
+
+*
+
+difficultyCountries.length
 
 )
 
 ]
 
 
-await loadMap(
+drawCountry(
 
 currentCountry.cca3
 
 )
 
 
-// cria alternativas
+// alternativas
 
-let options = [
+let options=[
 
 currentCountry,
 
-...shuffle(countries)
-
-.slice(0,4)
+...shuffle(countries).slice(0,4)
 
 ]
 
-
 options=shuffle(options)
-
 
 
 options.forEach(opt=>{
 
 let btn=document.createElement("button")
 
-btn.innerText=opt.name.common
+btn.innerText=
+
+opt.name.common
 
 
 btn.onclick=()=>{
@@ -335,7 +388,6 @@ currentCountry.name.common
 }
 
 }
-
 
 document.getElementById("options")
 
