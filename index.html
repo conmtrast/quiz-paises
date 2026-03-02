@@ -1,76 +1,35 @@
 <!DOCTYPE html>
 <html>
 <head>
-
 <meta charset="UTF-8">
-<title>Quiz Países</title>
-
-<link rel="stylesheet"
-href="https://unpkg.com/leaflet/dist/leaflet.css"/>
-
-<script
-src="https://unpkg.com/leaflet/dist/leaflet.js">
-</script>
+<title>Quiz Países 🌎</title>
 
 <style>
 
 body{
-
 font-family:Arial;
-background:#f5f5f5;
 text-align:center;
-
-}
-
-#menu{
-
-margin-top:80px;
-
+background:#f3f6fa;
 }
 
 button{
-
-margin:10px;
-padding:14px;
-
-width:240px;
-
-font-size:16px;
-
+margin:5px;
+padding:10px 15px;
 cursor:pointer;
-
 border-radius:8px;
-
 border:none;
-
-background:#222;
-
+background:#3b82f6;
 color:white;
-
 }
 
-#map{
+#map svg{
 
-height:450px;
-width:700px;
+width:400px;
+height:300px;
 
-margin:20px auto;
+fill:black;
 
-background:white;
-
-border-radius:15px;
-
-box-shadow:0px 10px 30px rgba(0,0,0,0.2);
-
-display:none;
-
-}
-
-#hud{
-
-font-size:20px;
-
-display:none;
+margin-top:20px;
 
 }
 
@@ -80,364 +39,314 @@ display:none;
 
 <body>
 
-<h1>Quiz de Países 🌎</h1>
+<h1>🌎 Quiz de Países</h1>
 
 <div id="menu">
 
-<h2>Escolha a dificuldade</h2>
+<h2>Escolha dificuldade</h2>
 
-<button onclick="iniciar('facil')">🟢 Fácil</button>
+<button onclick="startGame('facil')">
+Fácil
+</button>
 
-<button onclick="iniciar('medio')">🟡 Médio</button>
+<button onclick="startGame('medio')">
+Médio
+</button>
 
-<button onclick="iniciar('dificil')">🔴 Difícil</button>
-
-<button onclick="iniciar('todos')">🌎 Todos</button>
-
-</div>
-
-<div id="hud">
-
-⏱️ Tempo:
-<span id="tempo">10</span>
-
-⭐ Pontos:
-<span id="pontos">0</span>
+<button onclick="startGame('dificil')">
+Difícil
+</button>
 
 </div>
+
+<div id="game" style="display:none">
 
 <div id="map"></div>
 
-<div id="opcoes"></div>
+<div id="options"></div>
 
-<p id="resultado"></p>
+<p id="result"></p>
+
+<button onclick="nextCountry()">
+
+Próximo País
+
+</button>
+
+</div>
 
 <script>
 
-// ===== MAPA =====
+let countries = []
 
-const map=L.map('map',{
+let currentCountry
 
-zoomControl:false,
-dragging:false,
-scrollWheelZoom:false,
-doubleClickZoom:false
-
-}).setView([0,0],2);
-
-L.tileLayer(
-'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-{opacity:0}
-).addTo(map);
+let difficultyCountries
 
 
+// ------------------------------
+// níveis sugeridos
+// ------------------------------
 
-let paises=[];
-let paisesAtivos=[];
-let camadaPais;
+const facil = [
 
-let pontos=0;
-let tempo=10;
-let intervalo;
+"Brazil",
+"United States",
+"Canada",
+"Argentina",
+"France",
+"Germany",
+"Spain",
+"Italy",
+"Portugal",
+"United Kingdom",
+"Japan",
+"China",
+"India",
+"Australia",
+"Mexico",
+"Chile",
+"Peru",
+"South Africa",
+"Egypt"
 
-
-
-// ===== LISTAS =====
-
-// FÁCIL
-
-const facil=[
-
-"Brazil","United States of America","Canada","Mexico","Argentina",
-
-"France","Germany","Italy","Spain","Portugal","United Kingdom",
-
-"Russia","China","India","Japan","South Korea",
-
-"Australia","New Zealand",
-
-"Egypt","South Africa","Saudi Arabia",
-
-"Turkey","Iran","Israel",
-
-"Indonesia","Thailand","Philippines"
-
-];
+]
 
 
-// MÉDIO
+const medio = [
 
-const medio=[
+"Poland",
+"Turkey",
+"Ukraine",
+"Thailand",
+"Vietnam",
+"Morocco",
+"Greece",
+"Norway",
+"Sweden",
+"Finland",
+"New Zealand",
+"Colombia",
+"Venezuela",
+"Bolivia",
+"Romania",
+"Hungary",
+"Iran",
+"Iraq"
 
-"Poland","Romania","Hungary","Greece","Ukraine","Sweden",
-
-"Norway","Finland","Morocco","Algeria","Nigeria","Kenya",
-
-"Ghana","Peru","Chile","Colombia","Bolivia","Paraguay",
-
-"Vietnam","Malaysia","Pakistan","Kazakhstan",
-
-"United Arab Emirates","Qatar","Oman"
-
-];
-
-
-// DIFÍCIL
-
-const dificil=[
-
-"Lesotho","Eswatini","Liechtenstein","San Marino","Monaco",
-
-"Nauru","Tuvalu","Kiribati","Palau","Marshall Islands",
-
-"Seychelles","Comoros","Djibouti","Benin","Togo",
-
-"Brunei","Bhutan","Laos","Timor-Leste",
-
-"Slovenia","Luxembourg","Moldova"
-
-];
+]
 
 
+// difícil = resto automaticamente
 
-function nomePais(f){
+function startGame(level){
 
-return(
+document.getElementById("menu").style.display="none"
 
-f.properties.ADMIN ||
+document.getElementById("game").style.display="block"
 
-f.properties.name ||
-
-f.properties.NAME ||
-
-f.properties.NAME_EN ||
-
-""
-
-);
+fetchCountries(level)
 
 }
 
 
+async function fetchCountries(level){
 
-// ===== CARREGA MUNDO =====
+const res = await fetch(
 
-fetch(
-"https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson"
-)
-
-.then(r=>r.json())
-
-.then(data=>{
-
-paises=data.features;
-
-});
-
-
-
-function iniciar(nivel){
-
-document.getElementById("menu").style.display="none";
-
-document.getElementById("map").style.display="block";
-
-document.getElementById("hud").style.display="block";
-
-
-if(nivel==="todos"){
-
-paisesAtivos=paises;
-
-}else{
-
-const lista=
-
-nivel==="facil" ? facil :
-
-nivel==="medio" ? medio :
-
-dificil;
-
-
-paisesAtivos=
-
-paises.filter(p=>
-
-lista.includes(nomePais(p))
-
-);
-
-}
-
-novaPergunta();
-
-}
-
-
-
-function shuffle(a){
-
-return[...a].sort(()=>Math.random()-0.5);
-
-}
-
-
-
-function iniciarTimer(correto){
-
-clearInterval(intervalo);
-
-tempo=10;
-
-tempoSpan.innerText=tempo;
-
-
-intervalo=setInterval(()=>{
-
-tempo--;
-
-tempoSpan.innerText=tempo;
-
-if(tempo<=0){
-
-clearInterval(intervalo);
-
-resultado.innerText=
-
-"⏰ Era "+nomePais(correto);
-
-setTimeout(novaPergunta,2000);
-
-}
-
-},1000);
-
-}
-
-
-
-const tempoSpan=document.getElementById("tempo");
-
-const resultado=document.getElementById("resultado");
-
-
-
-function novaPergunta(){
-
-resultado.innerText="";
-
-
-const correto=
-
-paisesAtivos[
-
-Math.floor(Math.random()*paisesAtivos.length)
-
-];
-
-
-if(camadaPais){
-
-map.removeLayer(camadaPais);
-
-}
-
-
-camadaPais=L.geoJSON(correto,{
-
-style:{
-
-color:"#000",
-fillColor:"#000",
-fillOpacity:1
-
-}
-
-}).addTo(map);
-
-
-map.fitBounds(
-
-camadaPais.getBounds(),
-
-{padding:[40,40]}
-
-);
-
-
-const errados=
-
-shuffle(
-
-paisesAtivos.filter(
-
-p=>nomePais(p)!==nomePais(correto)
+"https://restcountries.com/v3.1/all?fields=name,cca3"
 
 )
 
-).slice(0,4);
+countries = await res.json()
 
 
-const respostas=
+if(level=="facil"){
 
-shuffle([
+difficultyCountries=
 
-correto,
+countries.filter(c=>
 
-...errados
+facil.includes(c.name.common)
 
-]);
+)
 
+}
 
-const div=document.getElementById("opcoes");
+else if(level=="medio"){
 
-div.innerHTML="";
+difficultyCountries=
 
+countries.filter(c=>
 
-respostas.forEach(opcao=>{
+medio.includes(c.name.common)
 
-const b=document.createElement("button");
+)
 
-b.innerText=nomePais(opcao);
+}
 
+else{
 
-b.onclick=()=>{
+difficultyCountries=
 
-clearInterval(intervalo);
+countries.filter(c=>
 
-if(nomePais(opcao)===nomePais(correto)){
+!facil.includes(c.name.common)
 
-pontos++;
+&&
 
-resultado.innerText="✅ Acertou!";
+!medio.includes(c.name.common)
 
-}else{
-
-resultado.innerText=
-
-"❌ Era "+nomePais(correto);
+)
 
 }
 
 
-document.getElementById("pontos")
-.innerText=pontos;
+nextCountry()
 
-setTimeout(novaPergunta,1500);
-
-};
-
-div.appendChild(b);
-
-});
+}
 
 
-iniciarTimer(correto);
+
+async function loadMap(cca3){
+
+try{
+
+// base open source MUITO confiável
+
+let url=
+
+`https://cdn.jsdelivr.net/npm/svg-world-map@1/world/${cca3.toLowerCase()}.svg`
+
+let res = await fetch(url)
+
+
+if(!res.ok){
+
+throw "erro"
+
+}
+
+
+let svg = await res.text()
+
+document.getElementById("map").innerHTML=svg
+
+}
+
+catch(e){
+
+document.getElementById("map").innerHTML=
+
+"<p>Silhueta não encontrada 😢</p>"
+
+}
+
+}
+
+
+
+function shuffle(arr){
+
+return arr.sort(()=>0.5-Math.random())
+
+}
+
+
+
+async function nextCountry(){
+
+document.getElementById("result").innerText=""
+
+document.getElementById("options").innerHTML=""
+
+document.getElementById("map").innerHTML="Carregando..."
+
+
+
+currentCountry=
+
+difficultyCountries[
+
+Math.floor(
+
+Math.random()*difficultyCountries.length
+
+)
+
+]
+
+
+await loadMap(
+
+currentCountry.cca3
+
+)
+
+
+// cria alternativas
+
+let options = [
+
+currentCountry,
+
+...shuffle(countries)
+
+.slice(0,4)
+
+]
+
+
+options=shuffle(options)
+
+
+
+options.forEach(opt=>{
+
+let btn=document.createElement("button")
+
+btn.innerText=opt.name.common
+
+
+btn.onclick=()=>{
+
+if(opt.name.common===
+
+currentCountry.name.common){
+
+document.getElementById("result")
+
+.innerText="✅ Acertou!"
+
+}
+
+else{
+
+document.getElementById("result")
+
+.innerText=
+
+"❌ Era "
+
++
+
+currentCountry.name.common
+
+}
+
+}
+
+
+document.getElementById("options")
+
+.appendChild(btn)
+
+})
 
 }
 
 </script>
 
 </body>
+
 </html>
