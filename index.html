@@ -16,23 +16,71 @@ src="https://unpkg.com/leaflet/dist/leaflet.js">
 <style>
 
 body{
+
 font-family:Arial;
+background:#f5f5f5;
 text-align:center;
+
+}
+
+h1{
+
+margin-top:20px;
+
 }
 
 #map{
-height:400px;
-width:600px;
-margin:auto;
+
+height:450px;
+width:700px;
+
+margin:20px auto;
+
+background:white;
+
+border-radius:15px;
+
+box-shadow:
+
+0px 10px 30px rgba(0,0,0,0.2);
+
 }
+
 
 button{
 
 display:block;
+
 margin:10px auto;
-padding:10px;
-width:220px;
+
+padding:12px;
+
+width:240px;
+
 cursor:pointer;
+
+font-size:16px;
+
+border-radius:8px;
+
+border:none;
+
+background:#222;
+
+color:white;
+
+}
+
+button:hover{
+
+background:#444;
+
+}
+
+#resultado{
+
+font-size:22px;
+margin:15px;
 
 }
 
@@ -56,16 +104,29 @@ Próximo País
 
 <script>
 
-// MAPA
+
+// MAPA LIMPO
 
 const map = L.map('map',{
 
 zoomControl:false,
+
 dragging:false,
+
 scrollWheelZoom:false,
-doubleClickZoom:false
+
+doubleClickZoom:false,
+
+boxZoom:false,
+
+keyboard:false,
+
+tap:false
 
 }).setView([0,0],2);
+
+
+// fundo invisível (sem mapa)
 
 L.tileLayer(
 
@@ -76,10 +137,12 @@ L.tileLayer(
 ).addTo(map);
 
 
+
 let camadaPais;
 
 
-// LISTA DE PAÍSES
+
+// LISTA
 
 const paises=[
 
@@ -102,7 +165,6 @@ const paises=[
 ];
 
 
-// embaralhar
 
 function shuffle(array){
 
@@ -111,7 +173,6 @@ return array.sort(()=>Math.random()-0.5);
 }
 
 
-// NOVA PERGUNTA
 
 function novaPergunta(){
 
@@ -121,14 +182,16 @@ document.getElementById("resultado")
 const correto=
 
 paises[
+
 Math.floor(
+
 Math.random()*paises.length
+
 )
 
 ];
 
 
-// carregar GeoJSON
 
 fetch(
 
@@ -146,44 +209,63 @@ map.removeLayer(camadaPais);
 
 }
 
+
+// silhueta estilizada
+
 camadaPais=L.geoJSON(data,{
 
 style:{
 
-color:"black",
+color:"#000",
 
-fillColor:"black",
+fillColor:"#000",
 
-fillOpacity:1
+fillOpacity:1,
+
+weight:1
 
 }
 
 }).addTo(map);
 
-map.fitBounds(camadaPais.getBounds());
+
+// centraliza perfeito
+
+map.fitBounds(
+
+camadaPais.getBounds(),
+
+{
+
+padding:[40,40]
+
+}
+
+);
 
 });
 
 
-// montar opções
 
-const opcoes=shuffle(
+// opções
 
-[
+const opcoes=shuffle([
 
 correto,
 
 ...shuffle(paises)
+
 .filter(p=>p.code!==correto.code)
+
 .slice(0,4)
 
-]
+]);
 
-);
 
 const div=document.getElementById("opcoes");
 
 div.innerHTML="";
+
 
 
 opcoes.forEach(opcao=>{
@@ -197,7 +279,9 @@ botao.onclick=()=>{
 document.getElementById("resultado")
 .innerText=
 
-opcao.code===correto.code ?
+opcao.code===correto.code
+
+?
 
 "✅ Acertou!"
 
@@ -214,7 +298,6 @@ div.appendChild(botao);
 }
 
 
-// começa jogo
 
 novaPergunta();
 
