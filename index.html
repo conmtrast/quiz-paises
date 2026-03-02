@@ -1,15 +1,29 @@
 <!DOCTYPE html>
 <html>
 <head>
+
 <meta charset="UTF-8">
+
 <title>Quiz Países</title>
+
+<link rel="stylesheet"
+href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+
+<script
+src="https://unpkg.com/leaflet/dist/leaflet.js">
+</script>
 
 <style>
 
 body{
 font-family:Arial;
 text-align:center;
-margin-top:50px;
+}
+
+#map{
+height:400px;
+width:600px;
+margin:auto;
 }
 
 button{
@@ -28,7 +42,7 @@ cursor:pointer;
 
 <h1>Qual é o país?</h1>
 
-<h2 id="pergunta">🇧🇷</h2>
+<div id="map"></div>
 
 <div id="opcoes"></div>
 
@@ -36,8 +50,51 @@ cursor:pointer;
 
 <script>
 
+// cria mapa vazio
+const map = L.map('map',{
+zoomControl:false,
+dragging:false,
+scrollWheelZoom:false,
+doubleClickZoom:false
+}).setView([0,0],2);
+
+// fundo branco
+L.tileLayer(
+'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+{
+opacity:0
+}
+).addTo(map);
+
+
+// Brasil GeoJSON (exemplo)
+fetch("https://raw.githubusercontent.com/johan/world.geo.json/master/countries/BRA.geo.json")
+
+.then(res => res.json())
+
+.then(data => {
+
+const pais = L.geoJSON(data,{
+
+style:{
+color:"black",
+fillColor:"black",
+fillOpacity:1
+}
+
+}).addTo(map);
+
+map.fitBounds(pais.getBounds());
+
+});
+
+
+// QUIZ
+
 const pergunta = {
+
 resposta:"Brasil",
+
 opcoes:[
 "Argentina",
 "Chile",
@@ -45,27 +102,27 @@ opcoes:[
 "Peru",
 "Colômbia"
 ]
+
 };
 
 const div = document.getElementById("opcoes");
 
-pergunta.opcoes.forEach(opcao => {
+pergunta.opcoes.forEach(opcao=>{
 
-const botao = document.createElement("button");
+const botao=document.createElement("button");
 
-botao.innerText = opcao;
+botao.innerText=opcao;
 
-botao.onclick = () => {
+botao.onclick=()=>{
 
-if(opcao === pergunta.resposta){
+document.getElementById("resultado")
+.innerText=
 
-document.getElementById("resultado").innerText="✅ Acertou!";
+opcao===pergunta.resposta ?
 
-}else{
+"✅ Acertou!" :
 
-document.getElementById("resultado").innerText="❌ Errou!";
-
-}
+"❌ Errou!";
 
 };
 
