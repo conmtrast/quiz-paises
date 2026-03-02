@@ -3,7 +3,6 @@
 <head>
 
 <meta charset="UTF-8">
-
 <title>Quiz Países</title>
 
 <link rel="stylesheet"
@@ -16,11 +15,9 @@ src="https://unpkg.com/leaflet/dist/leaflet.js">
 <style>
 
 body{
-
 font-family:Arial;
 background:#f5f5f5;
 text-align:center;
-
 }
 
 #map{
@@ -35,7 +32,6 @@ background:white;
 border-radius:15px;
 
 box-shadow:
-
 0px 10px 30px rgba(0,0,0,0.2);
 
 }
@@ -97,6 +93,7 @@ Próximo País
 
 <script>
 
+// MAPA LIMPO
 
 const map=L.map('map',{
 
@@ -112,11 +109,8 @@ keyboard:false
 // fundo invisível
 
 L.tileLayer(
-
 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-
 {opacity:0}
-
 ).addTo(map);
 
 
@@ -127,19 +121,43 @@ let paises=[];
 
 
 
+// função segura para pegar nome
+
+function nomePais(feature){
+
+return (
+
+feature.properties.ADMIN ||
+
+feature.properties.name ||
+
+feature.properties.NAME ||
+
+feature.properties.NAME_EN ||
+
+feature.properties.SOVEREIGNT ||
+
+"País"
+
+);
+
+}
+
+
+
 // carregar mundo inteiro
 
 fetch(
-
 "https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson"
-
 )
 
 .then(res=>res.json())
 
 .then(data=>{
 
-paises=data.features;
+// filtra só países válidos
+
+paises=data.features.filter(f=>nomePais(f)!=="País");
 
 novaPergunta();
 
@@ -149,7 +167,7 @@ novaPergunta();
 
 function shuffle(array){
 
-return array.sort(()=>Math.random()-0.5);
+return [...array].sort(()=>Math.random()-0.5);
 
 }
 
@@ -164,22 +182,16 @@ document.getElementById("resultado")
 .innerText="";
 
 
-// escolher aleatório
+// escolhe correto
 
 const correto=
 
 paises[
-
-Math.floor(
-
-Math.random()*paises.length
-
-)
-
+Math.floor(Math.random()*paises.length)
 ];
 
 
-// remover anterior
+// remove anterior
 
 if(camadaPais){
 
@@ -188,22 +200,23 @@ map.removeLayer(camadaPais);
 }
 
 
-// desenhar país
+// desenha silhueta
 
 camadaPais=L.geoJSON(correto,{
 
 style:{
 
 color:"#000",
-
 fillColor:"#000",
-
-fillOpacity:1
+fillOpacity:1,
+weight:1
 
 }
 
 }).addTo(map);
 
+
+// centraliza
 
 map.fitBounds(
 
@@ -214,25 +227,30 @@ camadaPais.getBounds(),
 );
 
 
-// respostas
 
-const respostas=shuffle([
+// montar opções
 
-correto,
+const errados=shuffle(
 
-...shuffle(paises)
+paises.filter(
 
-.filter(p=>
-
-p.properties.ADMIN !==
-
-correto.properties.ADMIN
+p=>nomePais(p)!==nomePais(correto)
 
 )
 
-.slice(0,4)
+).slice(0,4);
+
+
+const respostas=
+
+shuffle([
+
+correto,
+
+...errados
 
 ]);
+
 
 
 const div=document.getElementById("opcoes");
@@ -245,9 +263,7 @@ respostas.forEach(opcao=>{
 
 const botao=document.createElement("button");
 
-botao.innerText=
-
-opcao.properties.ADMIN;
+botao.innerText=nomePais(opcao);
 
 
 botao.onclick=()=>{
@@ -255,9 +271,7 @@ botao.onclick=()=>{
 document.getElementById("resultado")
 .innerText=
 
-opcao.properties.ADMIN===
-
-correto.properties.ADMIN
+nomePais(opcao)===nomePais(correto)
 
 ?
 
